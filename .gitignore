@@ -33,3 +33,12 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Used by eclipse
+.settings/
+
+# Vim swap files
+*.swp
+
+# Backup files
+*~
