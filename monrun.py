@@ -18,10 +18,16 @@
 import getopt
 import hashlib
 import os
+import string
 import sys
 import time
 
 def Data(cls):
+    """Decorator to make a data class
+
+    It uses the class attribute _data_ that shall be a list of names. These
+    names will be available as instance attributes.
+    """
     attributes = cls._data_
     del cls._data_
     if not attributes:
@@ -116,6 +122,9 @@ def main():
     if not command:
         print "No command passed. You can pass via -c switch"
         sys.exit(ERROR_COMMAND)
+
+    # substitute any ${file} from command string by the monitoring file path
+    command = string.Template(command).safe_substitute({"file": FILE_PATH})
 
     if before:
         os.system(command)
