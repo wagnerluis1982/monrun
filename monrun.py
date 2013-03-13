@@ -95,7 +95,8 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
-                "bac:")
+                "bac:",
+                ["change-workdir", "no-change-workdir"])
     except getopt.GetoptError, err:
         print err
         sys.exit(ERROR_GETOPT)
@@ -111,6 +112,7 @@ def main():
 
     before = False
     command = None
+    chworkdir = True
     for option, arg in opts:
         if option == "-c":
             command = arg
@@ -118,6 +120,10 @@ def main():
             before = True
         elif option == "-a":
             before = False
+        elif option == "--no-change-workdir":
+            chworkdir = False
+        elif option == "--change-workdir":
+            chworkdir = True
 
     if not command:
         print "No command passed. You can pass via -c switch"
@@ -126,11 +132,17 @@ def main():
     # substitute any ${file} from command string by the monitoring file path
     command = string.Template(command).safe_substitute({"file": FILE_PATH})
 
+    # set the working dir, if asked
+    if chworkdir:
+        os.chdir(os.path.dirname(FILE_PATH))
+
     if before:
         os.system(command)
 
     try:
-        print "[MONRUN] Calculating %s checksum for the first time" % FILE_PATH
+        print "[MONRUN] Using '%s' as working dir" % os.getcwd()
+        print ("[MONRUN] Calculating '%s' checksum for the first time" %
+                    (os.path.basename(FILE_PATH) if chworkdir else FILE_PATH))
         with open(FILE_PATH) as f:
             file_info = FileInfo(get_file_stat(f), get_file_checksum(f))
 
