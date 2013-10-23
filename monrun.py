@@ -134,7 +134,9 @@ def main():
 
     # set the working dir, if asked
     if chworkdir:
-        os.chdir(os.path.dirname(FILE_PATH))
+        dirname = os.path.dirname(FILE_PATH)
+        if dirname != "":
+            os.chdir(dirname)
 
     if before:
         os.system(command)
