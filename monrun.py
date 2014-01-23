@@ -83,7 +83,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
-                "batc:",
+                "batc:f:",
                 ["change-workdir", "no-change-workdir", "only-time"])
     except getopt.GetoptError, err:
         print err
@@ -102,6 +102,7 @@ def main():
     command = None
     chworkdir = True
     onlytime = False
+    extrafiles = []
     for option, arg in opts:
         if option == "-c":
             command = arg
@@ -109,6 +110,8 @@ def main():
             before = True
         elif option == "-a":
             before = False
+        elif option == "-f":
+            extrafiles.append(arg)
         elif option == "--no-change-workdir":
             chworkdir = False
         elif option == "--change-workdir":
@@ -135,15 +138,28 @@ def main():
     try:
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
         with open(FILE_PATH) as f:
-            print "[MONRUN] Monitoring file for modifications"
+            print "[MONRUN] Monitoring file(s) for modifications"
             if not onlytime:
-                print "[MONRUN] Calculating checksum for the first time"
+                print "[MONRUN] Calculating checksums for the first time"
 
-            file_info = FileInfo(f, onlytime)
+            main_finfo = FileInfo(f, onlytime)
+            extrafinfos = [FileInfo(file(ef), onlytime) for ef in extrafiles]
+
             while True:
                 time.sleep(1)
-                if is_modified(file_info):
+                if is_modified(main_finfo):
                     os.system(command)
+                    continue
+
+                # Verifying extra files
+                i = 0
+                while i < len(extrafinfos):
+                    finfo = extrafinfos[i]
+                    if is_modified(finfo):
+                        os.system(command)
+                        break
+                    i += 1
+
     except KeyboardInterrupt:
         print "Execution interrupted"
 
