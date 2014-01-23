@@ -164,6 +164,9 @@ def main():
         elif option == "-a":
             before = False
         elif option == "-f":
+            if not os.path.isfile(arg):
+                print "'%s' doesn't exist or is not a valid file" % arg
+                sys.exit(ERROR_NOTFILE)
             extrafiles.append(arg)
         elif option == "--no-change-workdir":
             chworkdir = False
