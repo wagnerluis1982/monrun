@@ -129,6 +129,10 @@ class MRTemplate(string.Template):
         return self.pattern.sub(convert, self.template)
 
 
+def enquote(filename):
+    return '"%s"' % filename.replace('"', r'\"')
+
+
 ERROR_GETOPT = 1
 ERROR_NOARG = 2
 ERROR_NOTFILE = 3
@@ -178,7 +182,7 @@ def main():
         sys.exit(ERROR_COMMAND)
 
     # substitute any @{file} from command string by the monitoring file path
-    command = MRTemplate(command).safe_substitute({"file": files[0]})
+    command = MRTemplate(command).safe_substitute({"file": enquote(files[0])})
 
     # set the working dir, if asked
     if chworkdir:
