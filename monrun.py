@@ -22,32 +22,13 @@ import string
 import sys
 import time
 
-def Data(cls):
-    """Decorator to make a data class
 
-    It uses the class attribute _data_ that shall be a list of names. These
-    names will be available as instance attributes.
-    """
-    attributes = cls._data_
-    del cls._data_
-    if not attributes:
-        return cls
-
-    signature = ["def __init__(self,"]
-    body = []
-    for a in attributes:
-        signature.append("%s," % a)
-        body.append("  self.{0} = {0}\n".format(a))
-    signature.append("):\n")
-
-    exec(''.join(signature+body))
-    cls.__init__ = __init__
-
-    return cls
-
-@Data
 class FileInfo:
-    _data_ = ('stat', 'checksum')
+    def __init__(self, infile):
+        self.infile = infile
+        self.stat = get_file_stat(infile)
+        self.checksum = get_file_checksum(infile)
+
 
 def get_file_checksum(infile, block_size=2**10):
     md5 = hashlib.md5()
@@ -60,13 +41,15 @@ def get_file_checksum(infile, block_size=2**10):
 
     return md5.digest()
 
+
 def get_file_stat(infile):
     return os.fstat(infile.fileno())
 
-def is_modified(finfo, infile):
+
+def is_modified(finfo):
     # Check firstly for differences in modification time
     prev_stat = finfo.stat
-    curr_stat = get_file_stat(infile)
+    curr_stat = get_file_stat(finfo.infile)
     if curr_stat.st_mtime == prev_stat.st_mtime:
         return False
 
@@ -76,8 +59,8 @@ def is_modified(finfo, infile):
         return True
 
     # If no differences seen, so check for differences in checksum
-    infile.seek(0)
-    curr_checksum = get_file_checksum(infile)
+    finfo.infile.seek(0)
+    curr_checksum = get_file_checksum(finfo.infile)
     if curr_checksum != finfo.checksum:
         finfo.checksum = curr_checksum
         return True
@@ -143,15 +126,14 @@ def main():
 
     try:
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
-        print ("[MONRUN] Calculating '%s' checksum for the first time" %
-                    (os.path.basename(FILE_PATH) if chworkdir else FILE_PATH))
         with open(FILE_PATH) as f:
-            file_info = FileInfo(get_file_stat(f), get_file_checksum(f))
-
+            print "[MONRUN] Calculating checksum for the first time"
             print "[MONRUN] Monitoring file for modifications"
+            file_info = FileInfo(f)
+
             while True:
                 time.sleep(1)
-                if is_modified(file_info, f):
+                if is_modified(file_info):
                     os.system(command)
     except KeyboardInterrupt:
         print "Execution interrupted"
