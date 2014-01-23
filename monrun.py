@@ -142,20 +142,11 @@ def main():
         print err
         sys.exit(ERROR_GETOPT)
 
-    if not args:
-        print "Program needs a file to monitor"
-        sys.exit(ERROR_NOARG)
-
-    FILE_PATH = args[0]
-    if not os.path.isfile(FILE_PATH):
-        print "'%s' doesn't exist or is not a valid file" % FILE_PATH
-        sys.exit(ERROR_NOTFILE)
-
     before = False
     command = None
     chworkdir = True
     onlytime = False
-    extrafiles = []
+    files = []
     for option, arg in opts:
         if option == "-c":
             command = arg
@@ -167,7 +158,7 @@ def main():
             if not os.path.isfile(arg):
                 print "'%s' doesn't exist or is not a valid file" % arg
                 sys.exit(ERROR_NOTFILE)
-            extrafiles.append(arg)
+            files.append(arg)
         elif option == "--no-change-workdir":
             chworkdir = False
         elif option == "--change-workdir":
@@ -175,47 +166,48 @@ def main():
         elif option in ("-t", "--only-time"):
             onlytime = True
 
+    if args:
+        files.insert(0, args[0])
+        if not os.path.isfile(files[0]):
+            print "'%s' doesn't exist or is not a valid file" % files[0]
+            sys.exit(ERROR_NOTFILE)
+    elif not files:
+        print "Program needs at least a file to monitor"
+        sys.exit(ERROR_NOARG)
+
     if not command:
         print "No command passed. You can pass via -c switch"
         sys.exit(ERROR_COMMAND)
 
     # substitute any @{file} from command string by the monitoring file path
-    command = MRTemplate(command).safe_substitute({"file": FILE_PATH})
+    command = MRTemplate(command).safe_substitute({"file": files[0]})
 
     # set the working dir, if asked
     if chworkdir:
-        dirname = os.path.dirname(FILE_PATH)
+        dirname = os.path.dirname(files[0])
         if dirname != "":
             os.chdir(dirname)
 
+    # execute the command once before
     if before:
         os.system(command)
 
     try:
-        s = 's' if extrafiles else ''
+        s = 's' if len(files) > 1 else ''
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
         print "[MONRUN] Monitoring file%s for modifications" % s
         if not onlytime:
             print "[MONRUN] Calculating checksum%s for the first time" % s
 
-        with open(FILE_PATH) as f:
-            main_finfo = FileInfo(f, onlytime)
-            extrafinfos = [FileInfo(file(ef), onlytime) for ef in extrafiles]
-
-            while True:
-                time.sleep(1)
-                if is_modified(main_finfo):
+        fileinfos = [FileInfo(file(f), onlytime) for f in files]
+        while True:
+            # Verifying files
+            time.sleep(1)
+            for i in range(len(fileinfos)):
+                finfo = fileinfos[i]
+                if is_modified(finfo):
                     os.system(command)
-                    continue
-
-                # Verifying extra files
-                i = 0
-                while i < len(extrafinfos):
-                    finfo = extrafinfos[i]
-                    if is_modified(finfo):
-                        os.system(command)
-                        break
-                    i += 1
+                    break
 
     except KeyboardInterrupt:
         print "Execution interrupted"
