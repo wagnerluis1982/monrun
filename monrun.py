@@ -24,10 +24,11 @@ import time
 
 
 class FileInfo:
-    def __init__(self, infile):
+    def __init__(self, infile, onlytime=False):
         self.infile = infile
+        self.onlytime = onlytime
         self.stat = get_file_stat(infile)
-        self.checksum = get_file_checksum(infile)
+        self.checksum = None if onlytime else get_file_checksum(infile)
 
 
 def get_file_checksum(infile, block_size=2**10):
@@ -52,6 +53,10 @@ def is_modified(finfo):
     curr_stat = get_file_stat(finfo.infile)
     if curr_stat.st_mtime == prev_stat.st_mtime:
         return False
+
+    if finfo.onlytime:
+        finfo.stat = curr_stat
+        return True
 
     # If modification time is not equal, compare size
     if curr_stat.st_size != prev_stat.st_size:
@@ -78,8 +83,8 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
-                "bac:",
-                ["change-workdir", "no-change-workdir"])
+                "batc:",
+                ["change-workdir", "no-change-workdir", "only-time"])
     except getopt.GetoptError, err:
         print err
         sys.exit(ERROR_GETOPT)
@@ -96,6 +101,7 @@ def main():
     before = False
     command = None
     chworkdir = True
+    onlytime = False
     for option, arg in opts:
         if option == "-c":
             command = arg
@@ -107,6 +113,8 @@ def main():
             chworkdir = False
         elif option == "--change-workdir":
             chworkdir = True
+        elif option in ("-t", "--only-time"):
+            onlytime = True
 
     if not command:
         print "No command passed. You can pass via -c switch"
@@ -127,10 +135,11 @@ def main():
     try:
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
         with open(FILE_PATH) as f:
-            print "[MONRUN] Calculating checksum for the first time"
             print "[MONRUN] Monitoring file for modifications"
-            file_info = FileInfo(f)
+            if not onlytime:
+                print "[MONRUN] Calculating checksum for the first time"
 
+            file_info = FileInfo(f, onlytime)
             while True:
                 time.sleep(1)
                 if is_modified(file_info):
