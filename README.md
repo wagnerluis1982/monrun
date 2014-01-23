@@ -9,14 +9,16 @@ How to use
 
 The single way to use is executing
 
-    $ python monrun.py -c <COMMAND> <FILE>
+    $ python monrun.py -c <COMMAND> <FILE> [FILES]...
 
 if you want that the command is once executed before start monitoring, use the
 `-b` switch as followed.
 
-    $ python monrun.py -b -c <COMMAND> <FILE>
+    $ python monrun.py -b -c <COMMAND> <FILE> [FILES]...
 
 A `-a` switch is also available to override a previous `-b` or vice versa.
+
+More parameters is available (soon displayed here).
 
 Why
 ===
@@ -32,8 +34,12 @@ monrun do in the following way:
 3. If file size is equals, is not a guarantee that the file is really modified,
    so monrun checks for difference calculating it checksum via md5.
 
+And more, it's possible to raise the command if any of the files passed is
+modified.
+
 To do
 =====
 
-- Add a `-t` switch to pass time between checks (currently the time is hardcoded
-  in 1 second).
+- Add a switch to pass time between checks (currently the time is hardcoded in 1
+  second).
+- Add -h|--help
