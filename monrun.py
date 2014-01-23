@@ -30,6 +30,32 @@ class FileInfo:
         self.stat = get_file_stat(infile)
         self.checksum = None if onlytime else get_file_checksum(infile)
 
+    def is_modified(self):
+        # Check firstly for differences in modification time
+        prev_stat = self.stat
+        curr_stat = get_file_stat(self.infile)
+        if curr_stat.st_mtime == prev_stat.st_mtime:
+            return False
+
+        if self.onlytime:
+            self.stat = curr_stat
+            return True
+
+        # If modification time is not equal, compare size
+        if curr_stat.st_size != prev_stat.st_size:
+            self.stat = curr_stat
+            return True
+
+        # If no differences seen, so check for differences in checksum
+        self.infile.seek(0)
+        curr_checksum = get_file_checksum(self.infile)
+        if curr_checksum != self.checksum:
+            self.checksum = curr_checksum
+            return True
+
+        # Non modified file
+        return False
+
 
 def get_file_checksum(infile, block_size=2**10):
     md5 = hashlib.md5()
@@ -45,33 +71,6 @@ def get_file_checksum(infile, block_size=2**10):
 
 def get_file_stat(infile):
     return os.fstat(infile.fileno())
-
-
-def is_modified(finfo):
-    # Check firstly for differences in modification time
-    prev_stat = finfo.stat
-    curr_stat = get_file_stat(finfo.infile)
-    if curr_stat.st_mtime == prev_stat.st_mtime:
-        return False
-
-    if finfo.onlytime:
-        finfo.stat = curr_stat
-        return True
-
-    # If modification time is not equal, compare size
-    if curr_stat.st_size != prev_stat.st_size:
-        finfo.stat = curr_stat
-        return True
-
-    # If no differences seen, so check for differences in checksum
-    finfo.infile.seek(0)
-    curr_checksum = get_file_checksum(finfo.infile)
-    if curr_checksum != finfo.checksum:
-        finfo.checksum = curr_checksum
-        return True
-
-    # Non modified file
-    return False
 
 
 class MRTemplate(string.Template):
@@ -205,10 +204,9 @@ def main():
             time.sleep(1)
             for i in range(len(fileinfos)):
                 finfo = fileinfos[i]
-                if is_modified(finfo):
+                if finfo.is_modified():
                     os.system(command)
                     break
-
     except KeyboardInterrupt:
         print "Execution interrupted"
 
