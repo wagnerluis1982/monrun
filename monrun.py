@@ -30,6 +30,9 @@ class FileInfo:
         self.stat = get_file_stat(infile)
         self.checksum = None if onlytime else get_file_checksum(infile)
 
+    def __str__(self):
+        return self.infile.name
+
     def is_modified(self):
         # Check firstly for differences in modification time
         prev_stat = self.stat
@@ -205,6 +208,8 @@ def main():
             for i in range(len(fileinfos)):
                 finfo = fileinfos[i]
                 if finfo.is_modified():
+                    print "[MONRUN] '%s' changed in" % finfo, \
+                            time.strftime("%h %e %X")
                     os.system(command)
                     break
     except KeyboardInterrupt:
