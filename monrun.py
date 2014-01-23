@@ -190,11 +190,11 @@ def main():
 
     try:
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
-        with open(FILE_PATH) as f:
-            print "[MONRUN] Monitoring file(s) for modifications"
-            if not onlytime:
-                print "[MONRUN] Calculating checksums for the first time"
+        print "[MONRUN] Monitoring file(s) for modifications"
+        if not onlytime:
+            print "[MONRUN] Calculating checksums for the first time"
 
+        with open(FILE_PATH) as f:
             main_finfo = FileInfo(f, onlytime)
             extrafinfos = [FileInfo(file(ef), onlytime) for ef in extrafiles]
 
