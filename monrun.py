@@ -189,10 +189,11 @@ def main():
         os.system(command)
 
     try:
+        s = 's' if extrafiles else ''
         print "[MONRUN] Using '%s' as working dir" % os.getcwd()
-        print "[MONRUN] Monitoring file(s) for modifications"
+        print "[MONRUN] Monitoring file%s for modifications" % s
         if not onlytime:
-            print "[MONRUN] Calculating checksums for the first time"
+            print "[MONRUN] Calculating checksum%s for the first time" % s
 
         with open(FILE_PATH) as f:
             main_finfo = FileInfo(f, onlytime)
