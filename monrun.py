@@ -148,7 +148,7 @@ def main():
 
     FILE_PATH = args[0]
     if not os.path.isfile(FILE_PATH):
-        print "Argument passed is not a file"
+        print "'%s' doesn't exist or is not a valid file" % FILE_PATH
         sys.exit(ERROR_NOTFILE)
 
     before = False
