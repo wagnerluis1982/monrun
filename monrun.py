@@ -74,6 +74,59 @@ def is_modified(finfo):
     return False
 
 
+class MRTemplate(string.Template):
+    _delext = True
+
+    delimiter = '@'
+    idpattern = r'[_a-z][-_a-z0-9]*'
+
+    def delext(self, mapping, key):
+        todel = False
+        if key.endswith("-ext"):
+            key = key[:-4]
+            todel = True
+
+        # We use this idiom instead of str() because the latter
+        # will fail if val is a Unicode containing non-ASCII
+        val = '%s' % (mapping[key],)
+
+        if todel:
+            return os.path.splitext(val)[0]
+        else:
+            return val
+
+    def safe_substitute(self, *args, **kws):
+        if len(args) > 1:
+            raise TypeError('Too many positional arguments')
+        if not args:
+            mapping = kws
+        elif kws:
+            mapping = _multimap(kws, args[0])
+        else:
+            mapping = args[0]
+        # Helper function for .sub()
+        def convert(mo):
+            named = mo.group('named')
+            if named is not None:
+                try:
+                    return self.delext(mapping, named)
+                except KeyError:
+                    return self.delimiter + named
+            braced = mo.group('braced')
+            if braced is not None:
+                try:
+                    return self.delext(mapping, braced)
+                except KeyError:
+                    return self.delimiter + '{' + braced + '}'
+            if mo.group('escaped') is not None:
+                return self.delimiter
+            if mo.group('invalid') is not None:
+                return self.delimiter
+            raise ValueError('Unrecognized named group in pattern',
+                             self.pattern)
+        return self.pattern.sub(convert, self.template)
+
+
 ERROR_GETOPT = 1
 ERROR_NOARG = 2
 ERROR_NOTFILE = 3
@@ -123,8 +176,8 @@ def main():
         print "No command passed. You can pass via -c switch"
         sys.exit(ERROR_COMMAND)
 
-    # substitute any ${file} from command string by the monitoring file path
-    command = string.Template(command).safe_substitute({"file": FILE_PATH})
+    # substitute any @{file} from command string by the monitoring file path
+    command = MRTemplate(command).safe_substitute({"file": FILE_PATH})
 
     # set the working dir, if asked
     if chworkdir:
