@@ -138,7 +138,7 @@ def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
-                "batc:f:",
+                "batc:",
                 ["change-workdir", "no-change-workdir", "only-time"])
     except getopt.GetoptError, err:
         print err
@@ -148,7 +148,6 @@ def main():
     command = None
     chworkdir = True
     onlytime = False
-    files = []
     for option, arg in opts:
         if option == "-c":
             command = arg
@@ -156,11 +155,6 @@ def main():
             before = True
         elif option == "-a":
             before = False
-        elif option == "-f":
-            if not os.path.isfile(arg):
-                print "'%s' doesn't exist or is not a valid file" % arg
-                sys.exit(ERROR_NOTFILE)
-            files.append(arg)
         elif option == "--no-change-workdir":
             chworkdir = False
         elif option == "--change-workdir":
@@ -168,17 +162,19 @@ def main():
         elif option in ("-t", "--only-time"):
             onlytime = True
 
-    if args:
-        files.insert(0, args[0])
-        if not os.path.isfile(files[0]):
-            print "'%s' doesn't exist or is not a valid file" % files[0]
+    files = []
+    for arg in args:
+        if not os.path.isfile(arg):
+            print "'%s' doesn't exist or is not a valid file" % arg
             sys.exit(ERROR_NOTFILE)
-    elif not files:
+        files.append(arg)
+
+    if not files:
         print "Program needs at least a file to monitor"
         sys.exit(ERROR_NOARG)
 
     if not command:
-        print "No command passed. You can pass via -c switch"
+        print "No command passed. You can pass it via -c switch"
         sys.exit(ERROR_COMMAND)
 
     # substitute any @{file} from command string by the monitoring file path
