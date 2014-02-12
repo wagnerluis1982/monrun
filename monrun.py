@@ -93,6 +93,9 @@ class MRTemplate(string.Template):
         val = '%s' % (mapping[key],)
 
         if todel:
+            # val is enquoted?
+            if val[0] == val[-1] == '"':
+                return os.path.splitext(val)[0] + '"'
             return os.path.splitext(val)[0]
         else:
             return val
