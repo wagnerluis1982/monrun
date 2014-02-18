@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2013 Wagner Macedo
 #
@@ -14,6 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from __future__ import print_function
 
 import getopt
 import hashlib
@@ -61,7 +63,7 @@ class FileInfo:
 
 def get_file_checksum(filename, block_size=2**10):
     md5 = hashlib.md5()
-    infile = file(filename)
+    infile = open(filename, "rb")
     while True:
         data = infile.read(block_size)
         if not data:
@@ -147,8 +149,8 @@ def main():
                 # short options
                 "batc:",
                 ["change-workdir", "no-change-workdir", "only-time"])
-    except getopt.GetoptError, err:
-        print err
+    except getopt.GetoptError as err:
+        print(err)
         sys.exit(ERROR_GETOPT)
 
     before = False
@@ -172,16 +174,16 @@ def main():
     files = []
     for arg in args:
         if not os.path.isfile(arg):
-            print "'%s' doesn't exist or is not a valid file" % arg
+            print("'%s' doesn't exist or is not a valid file" % arg)
             sys.exit(ERROR_NOTFILE)
         files.append(arg)
 
     if not files:
-        print "Program needs at least a file to monitor"
+        print("Program needs at least a file to monitor")
         sys.exit(ERROR_NOARG)
 
     if not command:
-        print "No command passed. You can pass it via -c switch"
+        print("No command passed. You can pass it via -c switch")
         sys.exit(ERROR_COMMAND)
 
     # substitute any @{file} from command string by the monitoring file path
@@ -199,10 +201,10 @@ def main():
 
     try:
         s = 's' if len(files) > 1 else ''
-        print "[MONRUN] Using '%s' as working dir" % os.getcwd()
-        print "[MONRUN] Monitoring file%s for modifications" % s
+        print("[MONRUN] Using '%s' as working dir" % os.getcwd())
+        print("[MONRUN] Monitoring file%s for modifications" % s)
         if not onlytime:
-            print "[MONRUN] Calculating checksum%s for the first time" % s
+            print("[MONRUN] Calculating checksum%s for the first time" % s)
 
         fileinfos = [FileInfo(f, onlytime) for f in files]
         while True:
@@ -211,12 +213,12 @@ def main():
             for i in range(len(fileinfos)):
                 finfo = fileinfos[i]
                 if finfo.is_modified():
-                    print "[MONRUN] '%s' changed in" % finfo, \
-                            time.strftime("%h %e %X")
+                    print("[MONRUN] '%s' changed in" % finfo, \
+                            time.strftime("%h %e %X"))
                     os.system(command)
                     break
     except KeyboardInterrupt:
-        print "Execution interrupted"
+        print("Execution interrupted")
 
 
 if __name__ == "__main__":
