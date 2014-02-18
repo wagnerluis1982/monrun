@@ -24,19 +24,19 @@ import time
 
 
 class FileInfo:
-    def __init__(self, infile, onlytime=False):
-        self.infile = infile
+    def __init__(self, filename, onlytime=False):
+        self.filename = filename
         self.onlytime = onlytime
-        self.stat = get_file_stat(infile)
-        self.checksum = None if onlytime else get_file_checksum(infile)
+        self.stat = get_file_stat(filename)
+        self.checksum = None if onlytime else get_file_checksum(filename)
 
     def __str__(self):
-        return self.infile.name
+        return self.filename
 
     def is_modified(self):
         # Check firstly for differences in modification time
         prev_stat = self.stat
-        curr_stat = get_file_stat(self.infile)
+        curr_stat = get_file_stat(self.filename)
         if curr_stat.st_mtime == prev_stat.st_mtime:
             return False
 
@@ -50,8 +50,7 @@ class FileInfo:
             return True
 
         # If no differences seen, so check for differences in checksum
-        self.infile.seek(0)
-        curr_checksum = get_file_checksum(self.infile)
+        curr_checksum = get_file_checksum(self.filename)
         if curr_checksum != self.checksum:
             self.checksum = curr_checksum
             return True
@@ -60,20 +59,21 @@ class FileInfo:
         return False
 
 
-def get_file_checksum(infile, block_size=2**10):
+def get_file_checksum(filename, block_size=2**10):
     md5 = hashlib.md5()
+    infile = file(filename)
     while True:
         data = infile.read(block_size)
         if not data:
             break
-
         md5.update(data)
+    infile.close()
 
     return md5.digest()
 
 
-def get_file_stat(infile):
-    return os.fstat(infile.fileno())
+def get_file_stat(filename):
+    return os.stat(filename)
 
 
 class MRTemplate(string.Template):
@@ -136,12 +136,12 @@ def enquote(filename):
     return '"%s"' % filename.replace('"', r'\"')
 
 
-ERROR_GETOPT = 1
-ERROR_NOARG = 2
-ERROR_NOTFILE = 3
-ERROR_COMMAND = 4
-
 def main():
+    ERROR_GETOPT = 1
+    ERROR_NOARG = 2
+    ERROR_NOTFILE = 3
+    ERROR_COMMAND = 4
+
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
@@ -204,7 +204,7 @@ def main():
         if not onlytime:
             print "[MONRUN] Calculating checksum%s for the first time" % s
 
-        fileinfos = [FileInfo(file(f), onlytime) for f in files]
+        fileinfos = [FileInfo(f, onlytime) for f in files]
         while True:
             # Verifying files
             time.sleep(1)
