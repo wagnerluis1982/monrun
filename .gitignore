@@ -37,6 +37,9 @@ nosetests.xml
 # Used by eclipse
 .settings/
 
+# Used by PyCharm
+.idea/
+
 # Vim swap files
 *.swp
 
