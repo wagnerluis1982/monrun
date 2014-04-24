@@ -25,37 +25,53 @@ import sys
 import time
 
 
+# flags
+CHECK_TIME = 0b001
+CHECK_SIZE = 0b010
+CHECK_SUM = 0b100
+
+
 class FileInfo:
-    def __init__(self, filename, onlytime=False):
+    def __init__(self, filename, flags):
         self.filename = filename
-        self.onlytime = onlytime
-        self.stat = get_file_stat(filename)
-        self.checksum = None if onlytime else get_file_checksum(filename)
+        self._flags = flags
+
+        if self.flags(CHECK_TIME, CHECK_SIZE):
+            self.stat = get_file_stat(filename)
+        if self.flags(CHECK_SUM):
+            self.checksum = get_file_checksum(filename)
 
     def __str__(self):
         return self.filename
 
+    def flags(self, *args):
+        return all([self._flags & a == a for a in args])
+
     def is_modified(self):
-        # Check firstly for differences in modification time
-        prev_stat = self.stat
-        curr_stat = get_file_stat(self.filename)
-        if curr_stat.st_mtime == prev_stat.st_mtime:
-            return False
+        if self.flags(CHECK_TIME, CHECK_SIZE):
+            # Check firstly for differences in modification time
+            prev_stat = self.stat
+            curr_stat = get_file_stat(self.filename)
+            if curr_stat.st_mtime == prev_stat.st_mtime:
+                return False
 
-        if self.onlytime:
-            self.stat = curr_stat
-            return True
+            # Finish if --only-time
+            if not self.flags(CHECK_SIZE | CHECK_SUM):
+                self.stat = curr_stat
+                return True
 
-        # If modification time is not equal, compare size
-        if curr_stat.st_size != prev_stat.st_size:
-            self.stat = curr_stat
-            return True
+            # If modification time is not equal, compare size
+            if self.flags(CHECK_SIZE) and \
+                    curr_stat.st_size != prev_stat.st_size:
+                self.stat = curr_stat
+                return True
 
         # If no differences seen, so check for differences in checksum
-        curr_checksum = get_file_checksum(self.filename)
-        if curr_checksum != self.checksum:
-            self.checksum = curr_checksum
-            return True
+        if self.flags(CHECK_SUM):
+            curr_checksum = get_file_checksum(self.filename)
+            if curr_checksum != self.checksum:
+                self.checksum = curr_checksum
+                return True
 
         # Non modified file
         return False
@@ -148,7 +164,9 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
                 "batc:",
-                ["chdir", "no-chdir", "only-time"])
+                # long options
+                ["chdir", "no-chdir", "command", "only-time", "no-time",
+                 "no-size", "no-checksum"])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(ERROR_GETOPT)
@@ -156,20 +174,26 @@ def main():
     before = False
     command = None
     chworkdir = True
-    onlytime = False
+    flags = CHECK_TIME | CHECK_SIZE | CHECK_SUM
     for option, arg in opts:
-        if option == "-c":
+        if option in ("-c", "--command"):
             command = arg
         elif option == "-b":
             before = True
         elif option == "-a":
             before = False
-        elif option == "--no-chdir":
-            chworkdir = False
         elif option == "--chdir":
             chworkdir = True
+        elif option == "--no-chdir":
+            chworkdir = False
         elif option in ("-t", "--only-time"):
-            onlytime = True
+            flags = CHECK_TIME
+        elif option == "--no-time":
+            flags ^= CHECK_TIME
+        elif option == "--no-size":
+            flags ^= CHECK_SIZE
+        elif option == "--no-checksum":
+            flags ^= CHECK_SUM
 
     files = []
     for arg in args:
@@ -203,18 +227,18 @@ def main():
         s = 's' if len(files) > 1 else ''
         print("[MONRUN] Using '%s' as working dir" % os.getcwd())
         print("[MONRUN] Monitoring file%s for modifications" % s)
-        if not onlytime:
+        if flags & CHECK_TIME == CHECK_TIME:
             print("[MONRUN] Calculating checksum%s for the first time" % s)
 
-        fileinfos = [FileInfo(f, onlytime) for f in files]
+        fileinfos = [FileInfo(f, flags) for f in files]
         while True:
             # Verifying files
             time.sleep(1)
             for i in range(len(fileinfos)):
                 finfo = fileinfos[i]
                 if finfo.is_modified():
-                    print("[MONRUN] '%s' changed in" % finfo, \
-                            time.strftime("%h %e %X"))
+                    print("[MONRUN] '%s' changed in" % finfo,
+                          time.strftime("%h %e %X"))
                     os.system(command)
                     break
     except KeyboardInterrupt:
