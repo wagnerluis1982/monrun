@@ -148,7 +148,7 @@ def main():
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
                 "batc:",
-                ["change-workdir", "no-change-workdir", "only-time"])
+                ["chdir", "no-chdir", "only-time"])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(ERROR_GETOPT)
@@ -164,9 +164,9 @@ def main():
             before = True
         elif option == "-a":
             before = False
-        elif option == "--no-change-workdir":
+        elif option == "--no-chdir":
             chworkdir = False
-        elif option == "--change-workdir":
+        elif option == "--chdir":
             chworkdir = True
         elif option in ("-t", "--only-time"):
             onlytime = True
