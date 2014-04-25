@@ -49,18 +49,21 @@ class FileInfo:
 
     def is_modified(self):
         if self.flags(CHECK_TIME, CHECK_SIZE):
-            # Check firstly for differences in modification time
+            # Get stats
             prev_stat = self.stat
             curr_stat = get_file_stat(self.filename)
-            if curr_stat.st_mtime == prev_stat.st_mtime:
-                return False
 
-            # Finish if --only-time
-            if not self.flags(CHECK_SIZE | CHECK_SUM):
-                self.stat = curr_stat
-                return True
+            if self.flags(CHECK_TIME):
+                # Check for differences in modification time
+                if curr_stat.st_mtime == prev_stat.st_mtime:
+                    return False
 
-            # If modification time is not equal, compare size
+                # Finish if set to only time
+                if not self.flags(CHECK_SIZE | CHECK_SUM):
+                    self.stat = curr_stat
+                    return True
+
+            # Compare size, returns if different
             if self.flags(CHECK_SIZE) and \
                     curr_stat.st_size != prev_stat.st_size:
                 self.stat = curr_stat
