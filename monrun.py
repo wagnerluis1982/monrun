@@ -17,6 +17,8 @@
 
 from __future__ import print_function
 
+from functools import reduce
+
 import getopt
 import hashlib
 import os
@@ -29,6 +31,9 @@ import time
 CHECK_TIME = 0b001
 CHECK_SIZE = 0b010
 CHECK_SUM = 0b100
+
+# mapping of names to flag
+string2flag = {"time": CHECK_TIME, "size": CHECK_SIZE, "checksum": CHECK_SUM}
 
 
 class FileInfo:
@@ -162,14 +167,14 @@ def main():
     ERROR_NOARG = 2
     ERROR_NOTFILE = 3
     ERROR_COMMAND = 4
+    ERROR_BADARG = 5
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
                 "batc:",
                 # long options
-                ["chdir", "no-chdir", "command", "only-time", "no-time",
-                 "no-size", "no-checksum"])
+                ["chdir", "no-chdir", "command=", "only=", "skip="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(ERROR_GETOPT)
@@ -189,14 +194,25 @@ def main():
             chworkdir = True
         elif option == "--no-chdir":
             chworkdir = False
-        elif option in ("-t", "--only-time"):
-            flags = CHECK_TIME
-        elif option == "--no-time":
-            flags ^= CHECK_TIME
-        elif option == "--no-size":
-            flags ^= CHECK_SIZE
-        elif option == "--no-checksum":
-            flags ^= CHECK_SUM
+        elif option in ("--only", "--skip"):
+            # get the list of flags by names passed
+            flag_list = arg.split(',')
+            for i, name in enumerate(flag_list):
+                flag = string2flag.get(name)
+                if flag is None:
+                    print("invalid arg for %s: '%s'" % (option, name))
+                    sys.exit(ERROR_BADARG)
+                flag_list[i] = flag
+
+            # flags to apply on following
+            fs = reduce(int.__or__, flag_list)
+
+            # if --only replace flags
+            if option == "--only":
+                flags = fs
+            # if --skip remove flags
+            else:
+                flags ^= fs
 
     files = []
     for arg in args:
