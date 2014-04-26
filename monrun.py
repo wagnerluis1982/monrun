@@ -27,6 +27,13 @@ import sys
 import time
 
 
+# error codes
+ERROR_GETOPT = 1
+ERROR_NOARG = 2
+ERROR_NOTFILE = 3
+ERROR_COMMAND = 4
+ERROR_BADARG = 5
+
 # flags
 CHECK_TIME = 0b001
 CHECK_SIZE = 0b010
@@ -127,12 +134,14 @@ class MRTemplate(string.Template):
             return val
 
     def safe_substitute(self, *args, **kws):
+        # To introduce @file-ext special feature, this method was rewritten.
+        # Most of the code is repeated from string.Template, since this class
+        # doesn't offer a good support to customize this method.
+
         if len(args) > 1:
             raise TypeError('Too many positional arguments')
         if not args:
             mapping = kws
-        elif kws:
-            mapping = _multimap(kws, args[0])
         else:
             mapping = args[0]
         # Helper function for .sub()
@@ -162,13 +171,54 @@ def enquote(filename):
     return '"%s"' % filename.replace('"', r'\"')
 
 
-def main():
-    ERROR_GETOPT = 1
-    ERROR_NOARG = 2
-    ERROR_NOTFILE = 3
-    ERROR_COMMAND = 4
-    ERROR_BADARG = 5
+def get_flags(option, arg):
+    # get the list of flags by names passed
+    flags = arg.split(',')
+    for i, name in enumerate(flags):
+        flag = string2flag.get(name)
+        if flag is None:
+            print("invalid arg for %s: '%s'" % (option, name))
+            sys.exit(ERROR_BADARG)
+        flags[i] = flag
 
+    # flags ready to apply
+    return reduce(int.__or__, flags)
+
+
+def get_files(args):
+    files = []
+    for arg in args:
+        if not os.path.isfile(arg):
+            print("'%s' doesn't exist or is not a valid file" % arg)
+            sys.exit(ERROR_NOTFILE)
+        files.append(arg)
+    return files
+
+
+def monitor_and_run(files, command, flags):
+    try:
+        s = 's' if len(files) > 1 else ''
+        print("[MONRUN] Using '%s' as working dir" % os.getcwd())
+        print("[MONRUN] Monitoring file%s for modifications" % s)
+        if flags & CHECK_TIME:
+            print("[MONRUN] Calculating checksum%s for the first time" % s)
+
+        fileinfos = [FileInfo(f, flags) for f in files]
+        while True:
+            # Verifying files
+            time.sleep(1)
+            for i in range(len(fileinfos)):
+                finfo = fileinfos[i]
+                if finfo.is_modified():
+                    print("[MONRUN] '%s' changed in" % finfo,
+                          time.strftime("%h %e %X"))
+                    os.system(command)
+                    break
+    except KeyboardInterrupt:
+        print("Execution interrupted")
+
+
+def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:],
                 # short options
@@ -194,33 +244,14 @@ def main():
             chworkdir = True
         elif option == "--no-chdir":
             chworkdir = False
-        elif option in ("--only", "--skip"):
-            # get the list of flags by names passed
-            flag_list = arg.split(',')
-            for i, name in enumerate(flag_list):
-                flag = string2flag.get(name)
-                if flag is None:
-                    print("invalid arg for %s: '%s'" % (option, name))
-                    sys.exit(ERROR_BADARG)
-                flag_list[i] = flag
+        elif option == "--only":
+            # replace flags by passed ones
+            flags = get_flags(option, arg)
+        elif option == "--skip":
+            # remove flags of passed ones
+            flags ^= get_flags(option, arg)
 
-            # flags to apply on following
-            fs = reduce(int.__or__, flag_list)
-
-            # if --only replace flags
-            if option == "--only":
-                flags = fs
-            # if --skip remove flags
-            else:
-                flags ^= fs
-
-    files = []
-    for arg in args:
-        if not os.path.isfile(arg):
-            print("'%s' doesn't exist or is not a valid file" % arg)
-            sys.exit(ERROR_NOTFILE)
-        files.append(arg)
-
+    files = get_files(args)
     if not files:
         print("Program needs at least a file to monitor")
         sys.exit(ERROR_NOARG)
@@ -234,34 +265,15 @@ def main():
 
     # set the working dir, if asked
     if chworkdir:
-        dirname = os.path.dirname(files[0])
-        if dirname != "":
-            os.chdir(dirname)
+        dirname = os.path.join('.', os.path.dirname(files[0]))
+        os.chdir(dirname)
 
     # execute the command once before
     if before:
         os.system(command)
 
-    try:
-        s = 's' if len(files) > 1 else ''
-        print("[MONRUN] Using '%s' as working dir" % os.getcwd())
-        print("[MONRUN] Monitoring file%s for modifications" % s)
-        if flags & CHECK_TIME == CHECK_TIME:
-            print("[MONRUN] Calculating checksum%s for the first time" % s)
-
-        fileinfos = [FileInfo(f, flags) for f in files]
-        while True:
-            # Verifying files
-            time.sleep(1)
-            for i in range(len(fileinfos)):
-                finfo = fileinfos[i]
-                if finfo.is_modified():
-                    print("[MONRUN] '%s' changed in" % finfo,
-                          time.strftime("%h %e %X"))
-                    os.system(command)
-                    break
-    except KeyboardInterrupt:
-        print("Execution interrupted")
+    # start monitoring forever
+    monitor_and_run(files, command, flags)
 
 
 if __name__ == "__main__":
