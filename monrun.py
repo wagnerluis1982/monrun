@@ -171,14 +171,21 @@ def enquote(filename):
     return '"%s"' % filename.replace('"', r'\"')
 
 
+def error(*args, **kwargs):
+    print(*args, file=sys.stderr)
+    errcode = kwargs.get('code')
+    if isinstance(errcode, int):
+        sys.exit(errcode)
+
+
 def get_flags(option, arg):
     # get the list of flags by names passed
     flags = arg.split(',')
     for i, name in enumerate(flags):
         flag = string2flag.get(name)
         if flag is None:
-            print("invalid arg for %s: '%s'" % (option, name))
-            sys.exit(ERROR_BADARG)
+            error("invalid arg for %s: '%s'" % (option, name),
+                  code=ERROR_BADARG)
         flags[i] = flag
 
     # flags ready to apply
@@ -189,8 +196,8 @@ def get_files(args):
     files = []
     for arg in args:
         if not os.path.isfile(arg):
-            print("'%s' doesn't exist or is not a valid file" % arg)
-            sys.exit(ERROR_NOTFILE)
+            error("'%s' doesn't exist or is not a valid file" % arg,
+                  code=ERROR_NOTFILE)
         files.append(arg)
     return files
 
@@ -226,8 +233,7 @@ def main():
                 # long options
                 ["chdir", "no-chdir", "command=", "only=", "skip="])
     except getopt.GetoptError as err:
-        print(err)
-        sys.exit(ERROR_GETOPT)
+        error(err, code=ERROR_GETOPT)
 
     before = False
     command = None
@@ -253,12 +259,11 @@ def main():
 
     files = get_files(args)
     if not files:
-        print("Program needs at least a file to monitor")
-        sys.exit(ERROR_NOARG)
+        error("Program needs at least a file to monitor", code=ERROR_NOARG)
 
     if not command:
-        print("No command passed. You can pass it via -c switch")
-        sys.exit(ERROR_COMMAND)
+        error("No command passed. You can pass it via -c switch",
+              code=ERROR_COMMAND)
 
     # substitute any @{file} from command string by the monitoring file path
     command = MRTemplate(command).safe_substitute({"file": enquote(files[0])})
