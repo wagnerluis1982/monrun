@@ -40,7 +40,7 @@ CHECK_SIZE = 0b010
 CHECK_SUM = 0b100
 
 # mapping of names to flag
-string2flag = {"time": CHECK_TIME, "size": CHECK_SIZE, "checksum": CHECK_SUM}
+map_of_flags = {"time": CHECK_TIME, "size": CHECK_SIZE, "checksum": CHECK_SUM}
 
 
 class FileInfo:
@@ -182,7 +182,7 @@ def get_flags(option, arg):
     # get the list of flags by names passed
     flags = arg.split(',')
     for i, name in enumerate(flags):
-        flag = string2flag.get(name)
+        flag = map_of_flags.get(name)
         if flag is None:
             error("invalid arg for %s: '%s'" % (option, name),
                   code=ERROR_BADARG)
