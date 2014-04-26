@@ -46,44 +46,44 @@ map_of_flags = {"time": CHECK_TIME, "size": CHECK_SIZE, "checksum": CHECK_SUM}
 class FileInfo:
     def __init__(self, filename, flags):
         self.filename = filename
-        self._flags = flags
+        self.flags = flags
 
-        if self.flags(CHECK_TIME, CHECK_SIZE):
-            self.stat = get_file_stat(filename)
-        if self.flags(CHECK_SUM):
-            self.checksum = get_file_checksum(filename)
+        if self.has_flags(CHECK_TIME, CHECK_SIZE):
+            self.stat = self.get_stat()
+        if self.has_flags(CHECK_SUM):
+            self.checksum = self.get_checksum()
 
     def __str__(self):
         return self.filename
 
-    def flags(self, *args):
-        return all([self._flags & a == a for a in args])
+    def has_flags(self, *args):
+        return all([self.flags & a == a for a in args])
 
     def is_modified(self):
-        if self.flags(CHECK_TIME, CHECK_SIZE):
+        if self.has_flags(CHECK_TIME, CHECK_SIZE):
             # Get stats
             prev_stat = self.stat
-            curr_stat = get_file_stat(self.filename)
+            curr_stat = self.get_stat()
 
-            if self.flags(CHECK_TIME):
+            if self.has_flags(CHECK_TIME):
                 # Check for differences in modification time
                 if curr_stat.st_mtime == prev_stat.st_mtime:
                     return False
 
                 # Finish if set to only time
-                if not self.flags(CHECK_SIZE | CHECK_SUM):
+                if not self.has_flags(CHECK_SIZE | CHECK_SUM):
                     self.stat = curr_stat
                     return True
 
             # Compare size, returns if different
-            if self.flags(CHECK_SIZE) and \
+            if self.has_flags(CHECK_SIZE) and \
                     curr_stat.st_size != prev_stat.st_size:
                 self.stat = curr_stat
                 return True
 
         # If no differences seen, so check for differences in checksum
-        if self.flags(CHECK_SUM):
-            curr_checksum = get_file_checksum(self.filename)
+        if self.has_flags(CHECK_SUM):
+            curr_checksum = self.get_checksum()
             if curr_checksum != self.checksum:
                 self.checksum = curr_checksum
                 return True
@@ -91,22 +91,20 @@ class FileInfo:
         # Non modified file
         return False
 
+    def get_checksum(self, block_size=2**10):
+        md5 = hashlib.md5()
+        infile = open(self.filename, "rb")
+        while True:
+            data = infile.read(block_size)
+            if not data:
+                break
+            md5.update(data)
+        infile.close()
 
-def get_file_checksum(filename, block_size=2**10):
-    md5 = hashlib.md5()
-    infile = open(filename, "rb")
-    while True:
-        data = infile.read(block_size)
-        if not data:
-            break
-        md5.update(data)
-    infile.close()
+        return md5.digest()
 
-    return md5.digest()
-
-
-def get_file_stat(filename):
-    return os.stat(filename)
+    def get_stat(self):
+        return os.stat(self.filename)
 
 
 class MRTemplate(string.Template):
