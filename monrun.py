@@ -268,7 +268,7 @@ def main():
 
     # set the working dir, if asked
     if chworkdir:
-        dirname = os.path.join('.', os.path.dirname(files[0]))
+        dirname = os.path.dirname(os.path.abspath(files[0]))
         os.chdir(dirname)
 
     # execute the command once before
