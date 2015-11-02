@@ -169,6 +169,10 @@ def enquote(filename):
     return '"%s"' % filename.replace('"', r'\"')
 
 
+def warning(*args):
+    print("WARNING:", *args, file=sys.stderr)
+
+
 def error(*args, **kwargs):
     print(*args, file=sys.stderr)
     errcode = kwargs.get('code')
@@ -194,8 +198,8 @@ def get_files(args):
     files = []
     for arg in args:
         if not os.path.isfile(arg):
-            error("'%s' doesn't exist or is not a valid file" % arg,
-                  code=ERROR_NOTFILE)
+            warning("'%s' doesn't exist or is not a valid file" % arg)
+            continue
         files.append(arg)
     return files
 
