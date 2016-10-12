@@ -109,7 +109,7 @@ class FileInfo:
 
 class MRTemplate(string.Template):
     delimiter = '@'
-    idpattern = r'[_a-z][-_a-z0-9]*'
+    idpattern = r'[_a-z]+-?[_a-z0-9]*[-^#]?'
 
 
 def enquote(filename):
@@ -218,7 +218,10 @@ def main():
     filename = enquote(files[0])
     extless = enquote(os.path.splitext(files[0])[0])
     command = MRTemplate(command).safe_substitute({"file": filename,
-                                                   "file-ext": extless})
+                                                   "file-ext": extless,
+                                                   "file-": extless,
+                                                   "file^": extless,
+                                                   "file#": extless})
 
     # set the working dir, if asked
     if chworkdir:
