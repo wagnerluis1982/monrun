@@ -239,7 +239,7 @@ def main():
 
     before = False
     command = None
-    chworkdir = True
+    chworkdir = False
     flags = CHECK_TIME | CHECK_SIZE | CHECK_SUM
     for option, arg in opts:
         if option in ("-c", "--command"):
